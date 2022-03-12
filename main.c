@@ -10,7 +10,6 @@ struct stats {
   int hits;
   int wins;
   int battles;
-  int time;
   int survived_battles;
 };
 
@@ -37,7 +36,7 @@ int main(int argc, char* argv[]) {
   free(url);
   curl_easy_setopt(handle, CURLOPT_WRITEFUNCTION, json_parse);
   printf("\033c");
-  printf("num |  damage | hitrate | winrate | survived |  time\n");
+  printf("num |  damage | hitrate | winrate | survived\n");
   for (;;) {
     curl_easy_perform(handle);
     sleep(1);
@@ -63,7 +62,6 @@ size_t json_parse(void *buffer, size_t size, size_t nmemb, void *userp) {
     struct json_object *battles;
     struct json_object *survived_battles;
     struct json_object *wins;
-    struct json_object *time;
     json_object_object_get_ex(me, "all", &all);
     json_object_object_get_ex(all, "damage_dealt", &damage_dealt);
     json_object_object_get_ex(all, "shots", &shots);
@@ -71,7 +69,6 @@ size_t json_parse(void *buffer, size_t size, size_t nmemb, void *userp) {
     json_object_object_get_ex(all, "wins", &wins);
     json_object_object_get_ex(all, "battles", &battles);
     json_object_object_get_ex(all, "survived_battles", &survived_battles);
-    json_object_object_get_ex(me, "battle_life_time", &time);
     if (!last_battle_time) {
       initial.damage_dealt = json_object_get_int(damage_dealt);
       initial.shots = json_object_get_int(shots);
@@ -79,7 +76,6 @@ size_t json_parse(void *buffer, size_t size, size_t nmemb, void *userp) {
       initial.wins = json_object_get_int(wins);
       initial.battles = json_object_get_int(battles);
       initial.survived_battles = json_object_get_int(survived_battles);
-      initial.time = json_object_get_int(time);
       last = initial;
     } else {
       counter++;
@@ -88,36 +84,31 @@ size_t json_parse(void *buffer, size_t size, size_t nmemb, void *userp) {
                               .shots = json_object_get_int(shots),
                               .wins = json_object_get_int(wins),
                               .battles = json_object_get_int(battles),
-                              .survived_battles = json_object_get_int(survived_battles),
-                              .time = json_object_get_int(time)};
+                              .survived_battles = json_object_get_int(survived_battles)};
       struct stats battle = {.damage_dealt = current.damage_dealt - last.damage_dealt,
                               .hits = current.hits - last.hits,
 			      .shots = current.shots - last.shots,
 			      .wins = current.wins - last.wins,
 			      .battles = current.battles - last.battles,
-			      .survived_battles = current.survived_battles - last.survived_battles,
-			      .time = current.time - last.time};
-      printf("%3i | %7.2f | %6.2f%% | %7s | %8s | %im%02is\n", 
+			      .survived_battles = current.survived_battles - last.survived_battles};
+      printf("\033[2K\r");
+      printf("%3i | %7.2f | %6.2f%% | %7s | %8s\n", 
              counter,
              (float)battle.damage_dealt / battle.battles, 
 	     (float)battle.hits / battle.shots * 100, 
 	     battle.wins ? "win" : "lose", 
-	     battle.survived_battles ? "survived" : "died", 
-	     battle.time / battle.battles / 60, battle.time / battle.battles % 60);
+	     battle.survived_battles ? "survived" : "died");
       struct stats session = {.damage_dealt = current.damage_dealt - initial.damage_dealt,
                               .hits = current.hits - initial.hits,
 			      .shots = current.shots - initial.shots,
 			      .wins = current.wins - initial.wins,
 			      .battles = current.battles - initial.battles,
-			      .survived_battles = current.survived_battles - initial.survived_battles,
-			      .time = current.time - initial.time};
-      printf("\033[2K\r");
-      printf("avg | %7.2f | %6.2f%% | %6.2f%% | %7.2f%% | %im%02is", 
+			      .survived_battles = current.survived_battles - initial.survived_battles};
+      printf("avg | %7.2f | %6.2f%% | %6.2f%% | %7.2f%%", 
              (float)session.damage_dealt / session.battles, 
 	     (float)session.hits / session.shots * 100, 
 	     (float)session.wins / session.battles * 100, 
-	     (float)session.survived_battles / session.battles * 100, 
-	     session.time / session.battles / 60, session.time / session.battles % 60);
+	     (float)session.survived_battles / session.battles * 100);
       fflush(stdout);
       last = current;
     }
