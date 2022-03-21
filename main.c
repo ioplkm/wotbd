@@ -13,7 +13,8 @@ struct stats {
   int survived_battles;
 };
 
-const char* tank_id = "3681";
+//const char* tank_id = "3681";
+//const char* tank_id = "19537";
 const char* account_id = "126219745";
 const char* app_id = "74198832ec124e1cfe22490f35a7085f";
 
@@ -31,7 +32,8 @@ int main(int argc, char* argv[]) {
   curl_global_init(CURL_GLOBAL_ALL);
   CURL *handle = curl_easy_init();
   char *url = (char*)malloc(sizeof(char) * 999); 
-  sprintf(url, "https://api.wotblitz.ru/wotb/account/tankstats/?application_id=%s&account_id=%s&tank_id=%s", app_id, account_id, tank_id);
+  //sprintf(url, "https://api.wotblitz.ru/wotb/account/tankstats/?application_id=%s&account_id=%s&tank_id=%s", app_id, account_id, tank_id);
+  sprintf(url, "https://api.wotblitz.ru/wotb/account/info/?application_id=%s&account_id=%s", app_id, account_id);
   curl_easy_setopt(handle, CURLOPT_URL, url);
   free(url);
   curl_easy_setopt(handle, CURLOPT_WRITEFUNCTION, json_parse);
@@ -56,13 +58,15 @@ size_t json_parse(void *buffer, size_t size, size_t nmemb, void *userp) {
   if (json_object_get_int(lbt) != last_battle_time) {
     //printf("time is updated\n");
     struct json_object *all;
+    struct json_object *statistics;
     struct json_object *damage_dealt;
     struct json_object *shots;
     struct json_object *hits;
     struct json_object *battles;
     struct json_object *survived_battles;
     struct json_object *wins;
-    json_object_object_get_ex(me, "all", &all);
+    json_object_object_get_ex(me, "statistics", &statistics);
+    json_object_object_get_ex(statistics, "all", &all);
     json_object_object_get_ex(all, "damage_dealt", &damage_dealt);
     json_object_object_get_ex(all, "shots", &shots);
     json_object_object_get_ex(all, "hits", &hits);
