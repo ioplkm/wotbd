@@ -15,15 +15,15 @@ typedef struct achievements {
 } achievements;
 
 typedef struct stats {
-  uint16_t damageDealt;
-  uint8_t shots;
-  uint8_t hits;
-  uint8_t wins;
-  uint8_t losses;
-  uint8_t battles;
-  uint8_t survivedBattles;
-  uint8_t frags;
-  uint8_t spots;
+  uint32_t damageDealt;
+  uint32_t shots;
+  uint32_t hits;
+  uint32_t wins;
+  uint32_t losses;
+  uint32_t battles;
+  uint32_t survivedBattles;
+  uint32_t frags;
+  uint32_t spots;
   achievements medals;
 } stats;
 
@@ -31,7 +31,6 @@ const char* accountId = "126219745";
 const char* appId = "74198832ec124e1cfe22490f35a7085f";
 
 time_t lastBattleTime, newTime;
-bool isTimeChanged;
 
 stats initialStats;
 stats lastStats;
@@ -72,8 +71,8 @@ int main() {
   curl_easy_setopt(achievementHandle, CURLOPT_WRITEDATA, &initialStats.medals);
   curl_easy_perform(achievementHandle);
   curl_easy_setopt(achievementHandle, CURLOPT_WRITEDATA, &currentStats.medals);
-  lastStats = initialStats;
 
+  lastStats = initialStats;
   free(url);
   printf("\x1B\x63");
   printf(" num | damage | hitrate | winrate | survival | frags | spots | M\n");
@@ -87,7 +86,7 @@ int main() {
       calculateStatsDifference(&currentStats, &initialStats, &sessionStats);
       printf("\x1B[2K\r");
       printf("%4i | %6i | %6.2f%% | %7s | %8s | %5d | %5d | %c\n", 
-             currentStats.battles - initialStats.battles,
+             sessionStats.battles,
              battleStats.damageDealt,
              (float)battleStats.hits / battleStats.shots * 100,
              battleStats.wins ? "win" : battleStats.losses ? "lose" : "draw",
