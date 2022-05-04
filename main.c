@@ -30,6 +30,10 @@ typedef struct stats {
 const char* accountId = "126219745";
 const char* appId = "74198832ec124e1cfe22490f35a7085f";
 
+const char* timeUrl = "https://api.wotblitz.ru/wotb/account/info/?application_id=%s&account_id=%s&fields=last_battle_time";
+const char* dataUrl = "https://api.wotblitz.ru/wotb/account/info/?application_id=%s&account_id=%s&fields=statistics.all.battles%%2Cstatistics.all.damage_dealt%%2Cstatistics.all.wins%%2Cstatistics.all.survived_battles%%2Cstatistics.all.hits%%2Cstatistics.all.shots%%2Cstatistics.all.losses%%2Cstatistics.all.frags%%2Cstatistics.all.spotted";
+const char* achievementUrl = "https://api.wotblitz.ru/wotb/account/achievements/?application_id=%s&account_id=%s&fields=achievements";
+
 time_t lastBattleTime, newTime;
 
 stats initialStats;
@@ -49,7 +53,7 @@ int main() {
   char *url = (char*)malloc(sizeof(char) * 999); 
 
   CURL *timeHandle = curl_easy_init();
-  sprintf(url, "https://api.wotblitz.ru/wotb/account/info/?application_id=%s&account_id=%s&fields=last_battle_time", appId, accountId);
+  sprintf(url, timeUrl, appId, accountId);
   curl_easy_setopt(timeHandle, CURLOPT_URL, url);
   curl_easy_setopt(timeHandle, CURLOPT_WRITEFUNCTION, timeParse);
   curl_easy_setopt(timeHandle, CURLOPT_WRITEDATA, &lastBattleTime);
@@ -57,7 +61,7 @@ int main() {
   curl_easy_setopt(timeHandle, CURLOPT_WRITEDATA, &newTime);
 
   CURL *dataHandle = curl_easy_init();
-  sprintf(url, "https://api.wotblitz.ru/wotb/account/info/?application_id=%s&account_id=%s&fields=statistics.all.battles%%2Cstatistics.all.damage_dealt%%2Cstatistics.all.wins%%2Cstatistics.all.survived_battles%%2Cstatistics.all.hits%%2Cstatistics.all.shots%%2Cstatistics.all.losses%%2Cstatistics.all.frags%%2Cstatistics.all.spotted", appId, accountId);
+  sprintf(url, dataUrl, appId, accountId);
   curl_easy_setopt(dataHandle, CURLOPT_URL, url);
   curl_easy_setopt(dataHandle, CURLOPT_WRITEFUNCTION, dataParse);
   curl_easy_setopt(dataHandle, CURLOPT_WRITEDATA, &initialStats);
@@ -65,16 +69,17 @@ int main() {
   curl_easy_setopt(dataHandle, CURLOPT_WRITEDATA, &currentStats);
 
   CURL *achievementHandle = curl_easy_init();
-  sprintf(url, "https://api.wotblitz.ru/wotb/account/achievements/?application_id=%s&account_id=%s&fields=achievements", appId, accountId);
+  sprintf(url, achievementUrl, appId, accountId);
   curl_easy_setopt(achievementHandle, CURLOPT_URL, url);
   curl_easy_setopt(achievementHandle, CURLOPT_WRITEFUNCTION, achievementParse);
   curl_easy_setopt(achievementHandle, CURLOPT_WRITEDATA, &initialStats.medals);
   curl_easy_perform(achievementHandle);
   curl_easy_setopt(achievementHandle, CURLOPT_WRITEDATA, &currentStats.medals);
 
-  lastStats = initialStats;
   free(url);
-  printf("\x1B\x63");
+  lastStats = initialStats;
+
+  printf("\x1B[2J\x1B[H");
   printf(" num | damage | hitrate | winrate | survival | frags | spots | M\n");
   for (;;) {
     curl_easy_perform(timeHandle);
