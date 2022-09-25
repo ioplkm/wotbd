@@ -1,0 +1,12 @@
+#!/bin/dash
+var=0
+while :
+do
+  ip=$(host $(printf "login%d.wotblitz.eu" $var) | grep -m1 address | awk '{print $4}')
+  if [ -z $ip ]
+  then 
+    break
+  fi
+  curl -s "https://json.geoiplookup.io/"$ip | grep city
+  var=$((var+1))
+done
