@@ -27,12 +27,12 @@ typedef struct stats {
   achievements medals;
 } stats;
 
-const char* accountId = "126219745";
-const char* appId = "74198832ec124e1cfe22490f35a7085f";
+const char* accountId = "595173901";
+const char* appId = "e9312825c85a13c661abccd749a42361";
 
-const char* timeUrl = "https://api.wotblitz.ru/wotb/account/info/?application_id=%s&account_id=%s&fields=last_battle_time";
-const char* dataUrl = "https://api.wotblitz.ru/wotb/account/info/?application_id=%s&account_id=%s&fields=statistics.all.battles%%2Cstatistics.all.damage_dealt%%2Cstatistics.all.wins%%2Cstatistics.all.survived_battles%%2Cstatistics.all.hits%%2Cstatistics.all.shots%%2Cstatistics.all.losses%%2Cstatistics.all.frags%%2Cstatistics.all.spotted";
-const char* achievementUrl = "https://api.wotblitz.ru/wotb/account/achievements/?application_id=%s&account_id=%s&fields=achievements";
+const char* timeUrl = "https://api.wotblitz.eu/wotb/account/info/?application_id=%s&account_id=%s&fields=last_battle_time";
+const char* dataUrl = "https://api.wotblitz.eu/wotb/account/info/?application_id=%s&account_id=%s&fields=statistics.all.battles%%2Cstatistics.all.damage_dealt%%2Cstatistics.all.wins%%2Cstatistics.all.survived_battles%%2Cstatistics.all.hits%%2Cstatistics.all.shots%%2Cstatistics.all.losses%%2Cstatistics.all.frags%%2Cstatistics.all.spotted";
+const char* achievementUrl = "https://api.wotblitz.eu/wotb/account/achievements/?application_id=%s&account_id=%s&fields=achievements";
 
 time_t lastBattleTime, newTime;
 
