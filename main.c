@@ -32,6 +32,7 @@ const char* appId = "e9312825c85a13c661abccd749a42361";
 
 const char* timeUrl = "https://api.wotblitz.eu/wotb/account/info/?application_id=%s&account_id=%s&fields=last_battle_time";
 const char* dataUrl = "https://api.wotblitz.eu/wotb/account/info/?application_id=%s&account_id=%s&fields=statistics.all.battles%%2Cstatistics.all.damage_dealt%%2Cstatistics.all.wins%%2Cstatistics.all.survived_battles%%2Cstatistics.all.hits%%2Cstatistics.all.shots%%2Cstatistics.all.losses%%2Cstatistics.all.frags%%2Cstatistics.all.spotted";
+const char* tanksUrl = "https://api.wotblitz.eu/wotb/tanks/stats/?application_id=%s&account_id=%s&fields=last_battle_time%%2Ctank_id";
 const char* achievementUrl = "https://api.wotblitz.eu/wotb/account/achievements/?application_id=%s&account_id=%s&fields=achievements";
 
 time_t lastBattleTime, newTime;
@@ -42,8 +43,11 @@ stats battleStats;
 stats sessionStats;
 stats currentStats;
 
+int lastTank;
+
 size_t timeParse(void* buffer, size_t size, size_t nmemb, time_t *pTime);
 size_t dataParse(void* buffer, size_t size, size_t nmemb, stats *pStats);
+size_t tanksParse(void* buffer, size_t size, size_t nmemb, int *pTank);
 size_t achievementParse(void* buffer, size_t size, size_t nmemb, achievements *pAchievements);
 
 void calculateStatsDifference(stats *currentStats, stats *lastStats, stats *battleStats);
@@ -68,6 +72,12 @@ int main() {
   curl_easy_perform(dataHandle);
   curl_easy_setopt(dataHandle, CURLOPT_WRITEDATA, &currentStats);
 
+  CURL *tanksHandle = curl_easy_init();
+  sprintf(url, tanksUrl, appId, accountId);
+  curl_easy_setopt(tanksHandle, CURLOPT_URL, url);
+  curl_easy_setopt(tanksHandle, CURLOPT_WRITEFUNCTION, tanksParse);
+  curl_easy_setopt(tanksHandle, CURLOPT_WRITEDATA, &lastTank);
+
   CURL *achievementHandle = curl_easy_init();
   sprintf(url, achievementUrl, appId, accountId);
   curl_easy_setopt(achievementHandle, CURLOPT_URL, url);
@@ -87,6 +97,7 @@ int main() {
       lastBattleTime = newTime;
       curl_easy_perform(dataHandle);
       curl_easy_perform(achievementHandle);
+curl_easy_perform(tanksHandle);
       calculateStatsDifference(&currentStats, &lastStats, &battleStats);
       calculateStatsDifference(&currentStats, &initialStats, &sessionStats);
       printf("\x1B[2K\r");
@@ -102,6 +113,7 @@ int main() {
              battleStats.medals.markOfMasteryI ? '1' :
              battleStats.medals.markOfMasteryII ? '2' :
              battleStats.medals.markOfMasteryIII ? '3' : '-');
+printf("   %d    ", lastTank);
       printf(" avg |%7.1f | %6.2f%% | %6.2f%% | %7.2f%% | %5.2f | %5.2f | %c",
              (float)sessionStats.damageDealt / sessionStats.battles,
              (float)sessionStats.hits / sessionStats.shots * 100,
@@ -129,6 +141,25 @@ size_t timeParse(void *buffer, size_t size, size_t nmemb, time_t *pTime) {
   json_object_object_get_ex(data, accountId, &me);
   json_object_object_get_ex(me, "last_battle_time", &last_battle_time);
   *pTime = json_object_get_int(last_battle_time);
+  return size * nmemb;
+}
+
+size_t tanksParse(void *buffer, size_t size, size_t nmemb, int *pTank) {
+  json_object *obj = json_tokener_parse(buffer);
+  json_object *data, *me;
+  json_object_object_get_ex(obj, "data", &data);
+  json_object_object_get_ex(data, accountId, &me);
+  json_object *array, *lbt, *tankId;
+  for (int i = 0; i < json_object_array_length(me); i++) {
+    array = json_object_array_get_idx(me, i);
+    json_object_object_get_ex(array, "last_battle_time", &lbt);
+    json_object_object_get_ex(array, "tank_id", &tankId);
+    if (json_object_get_int(lbt) == lastBattleTime) {
+      *pTank = json_object_get_int(tankId);
+      break;
+    }
+    //printf("%d\n", json_object_get_int(tankId));
+  }
   return size * nmemb;
 }
 
