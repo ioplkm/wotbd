@@ -3,6 +3,7 @@
 #include <stdbool.h>
 
 #include <unistd.h>
+#include <fcntl.h>
 
 #include <curl/curl.h>
 #include <json-c/json.h>
@@ -14,18 +15,29 @@ typedef struct achievements {
   uint32_t markOfMasteryIII;
 } achievements;
 
-typedef struct stats {
-  uint32_t damageDealt;
+typedef struct data {
+  uint32_t damage;
   uint32_t shots;
   uint32_t hits;
-  uint32_t wins;
-  uint32_t losses;
-  uint32_t battles;
-  uint32_t survivedBattles;
   uint32_t frags;
   uint32_t spots;
-  achievements medals;
-} stats;
+  uint32_t win;
+  uint32_t lose;
+  uint32_t survive;
+} data;
+
+typedef struct battle {
+  time_t timestamp;
+  uint16_t tankId;
+  uint16_t damage;
+  uint8_t hits;
+  uint8_t shots;
+  uint8_t frags : 4;
+  uint8_t spots : 4;
+  bool win : 1;
+  bool lose : 1;
+  bool survive : 1;
+} battle;
 
 const char* accountId = "595173901";
 const char* appId = "e9312825c85a13c661abccd749a42361";
@@ -37,22 +49,17 @@ const char* achievementUrl = "https://api.wotblitz.eu/wotb/account/achievements/
 
 time_t lastBattleTime, newTime;
 
-stats initialStats;
-stats lastStats;
-stats battleStats;
-stats sessionStats;
-stats currentStats;
-
-int lastTank;
+data lastData;
+data currentData;
+battle record;
 
 size_t timeParse(void* buffer, size_t size, size_t nmemb, time_t *pTime);
-size_t dataParse(void* buffer, size_t size, size_t nmemb, stats *pStats);
-size_t tanksParse(void* buffer, size_t size, size_t nmemb, int *pTank);
+size_t dataParse(void* buffer, size_t size, size_t nmemb, data *pData);
+size_t tanksParse(void* buffer, size_t size, size_t nmemb, uint16_t *tankId);
 size_t achievementParse(void* buffer, size_t size, size_t nmemb, achievements *pAchievements);
 
-void calculateStatsDifference(stats *currentStats, stats *lastStats, stats *battleStats);
-
 int main() {
+  //printf("%lu\n", sizeof(battle));
   curl_global_init(CURL_GLOBAL_ALL);
   char *url = (char*)malloc(sizeof(char) * 999); 
 
@@ -68,65 +75,44 @@ int main() {
   sprintf(url, dataUrl, appId, accountId);
   curl_easy_setopt(dataHandle, CURLOPT_URL, url);
   curl_easy_setopt(dataHandle, CURLOPT_WRITEFUNCTION, dataParse);
-  curl_easy_setopt(dataHandle, CURLOPT_WRITEDATA, &initialStats);
+  curl_easy_setopt(dataHandle, CURLOPT_WRITEDATA, &lastData);
   curl_easy_perform(dataHandle);
-  curl_easy_setopt(dataHandle, CURLOPT_WRITEDATA, &currentStats);
+  curl_easy_setopt(dataHandle, CURLOPT_WRITEDATA, &currentData);
 
   CURL *tanksHandle = curl_easy_init();
   sprintf(url, tanksUrl, appId, accountId);
   curl_easy_setopt(tanksHandle, CURLOPT_URL, url);
   curl_easy_setopt(tanksHandle, CURLOPT_WRITEFUNCTION, tanksParse);
-  curl_easy_setopt(tanksHandle, CURLOPT_WRITEDATA, &lastTank);
+  curl_easy_setopt(tanksHandle, CURLOPT_WRITEDATA, &record.tankId);
 
-  CURL *achievementHandle = curl_easy_init();
+  /*CURL *achievementHandle = curl_easy_init();
   sprintf(url, achievementUrl, appId, accountId);
   curl_easy_setopt(achievementHandle, CURLOPT_URL, url);
   curl_easy_setopt(achievementHandle, CURLOPT_WRITEFUNCTION, achievementParse);
   curl_easy_setopt(achievementHandle, CURLOPT_WRITEDATA, &initialStats.medals);
   curl_easy_perform(achievementHandle);
-  curl_easy_setopt(achievementHandle, CURLOPT_WRITEDATA, &currentStats.medals);
+  curl_easy_setopt(achievementHandle, CURLOPT_WRITEDATA, &currentStats.medals);*/
 
   free(url);
-  lastStats = initialStats;
-
-  printf("\x1B[2J\x1B[H");
-  printf(" num | damage | hitrate | winrate | survival | frags | spots | M\n");
+  int fd = open("/var/wotbd/battles.db", O_APPEND | O_CREAT | O_WRONLY, 0440);
   for (;;) {
     curl_easy_perform(timeHandle);
     if (newTime != lastBattleTime) {
       lastBattleTime = newTime;
+      record.timestamp = lastBattleTime;
+      curl_easy_perform(tanksHandle);
       curl_easy_perform(dataHandle);
-      curl_easy_perform(achievementHandle);
-curl_easy_perform(tanksHandle);
-      calculateStatsDifference(&currentStats, &lastStats, &battleStats);
-      calculateStatsDifference(&currentStats, &initialStats, &sessionStats);
-      printf("\x1B[2K\r");
-      printf("%4i | %6i | %6.2f%% | %7s | %8s | %5d | %5d | %c\n", 
-             sessionStats.battles,
-             battleStats.damageDealt,
-             (float)battleStats.hits / battleStats.shots * 100,
-             battleStats.wins ? "win" : battleStats.losses ? "lose" : "draw",
-             battleStats.survivedBattles ? "survived" : "died",
-             battleStats.frags,
-             battleStats.spots,
-             battleStats.medals.markOfMastery ? 'M' :
-             battleStats.medals.markOfMasteryI ? '1' :
-             battleStats.medals.markOfMasteryII ? '2' :
-             battleStats.medals.markOfMasteryIII ? '3' : '-');
-printf("   %d    ", lastTank);
-      printf(" avg |%7.1f | %6.2f%% | %6.2f%% | %7.2f%% | %5.2f | %5.2f | %c",
-             (float)sessionStats.damageDealt / sessionStats.battles,
-             (float)sessionStats.hits / sessionStats.shots * 100,
-             (float)sessionStats.wins / sessionStats.battles * 100,
-             (float)sessionStats.survivedBattles / sessionStats.battles * 100,
-             (float)sessionStats.frags / sessionStats.battles,
-             (float)sessionStats.spots / sessionStats.battles,
-             sessionStats.medals.markOfMastery ? 'M' :
-             sessionStats.medals.markOfMasteryI ? '1' :
-             sessionStats.medals.markOfMasteryII ? '2' :
-             sessionStats.medals.markOfMasteryIII ? '3' : '-');
-      fflush(stdout);
-      lastStats = currentStats;
+      record.damage = currentData.damage - lastData.damage;
+      record.shots = currentData.shots - lastData.shots;
+      record.hits = currentData.hits - lastData.hits;
+      record.spots = currentData.spots - lastData.spots;
+      record.frags = currentData.frags - lastData.frags;
+      record.win = currentData.win - lastData.win;
+      record.lose = currentData.lose - lastData.lose;
+      record.survive = currentData.survive - lastData.survive;
+      lastData = currentData;
+      //curl_easy_perform(achievementHandle);
+      write(fd, &record, 16);
     }
     sleep(1);
   }
@@ -144,26 +130,25 @@ size_t timeParse(void *buffer, size_t size, size_t nmemb, time_t *pTime) {
   return size * nmemb;
 }
 
-size_t tanksParse(void *buffer, size_t size, size_t nmemb, int *pTank) {
+size_t tanksParse(void *buffer, size_t size, size_t nmemb, uint16_t *pTankId) {
   json_object *obj = json_tokener_parse(buffer);
   json_object *data, *me;
   json_object_object_get_ex(obj, "data", &data);
   json_object_object_get_ex(data, accountId, &me);
   json_object *array, *lbt, *tankId;
-  for (int i = 0; i < json_object_array_length(me); i++) {
+  for (int i = 0; i < (int)json_object_array_length(me); i++) {
     array = json_object_array_get_idx(me, i);
     json_object_object_get_ex(array, "last_battle_time", &lbt);
     json_object_object_get_ex(array, "tank_id", &tankId);
     if (json_object_get_int(lbt) == lastBattleTime) {
-      *pTank = json_object_get_int(tankId);
+      *pTankId = json_object_get_int(tankId);
       break;
     }
-    //printf("%d\n", json_object_get_int(tankId));
   }
   return size * nmemb;
 }
 
-size_t dataParse(void *buffer, size_t size, size_t nmemb, stats *pStats) {
+size_t dataParse(void *buffer, size_t size, size_t nmemb, data *pData) {
   json_object *obj = json_tokener_parse(buffer);
   json_object *data, *me, *statistics, *all;
   json_object_object_get_ex(obj, "data", &data);
@@ -180,15 +165,14 @@ size_t dataParse(void *buffer, size_t size, size_t nmemb, stats *pStats) {
   json_object_object_get_ex(all, "losses", &losses);
   json_object_object_get_ex(all, "frags", &frags);
   json_object_object_get_ex(all, "spotted", &spotted);
-  pStats->damageDealt = json_object_get_int(damage_dealt);
-  pStats->hits = json_object_get_int(hits);
-  pStats->shots = json_object_get_int(shots);
-  pStats->wins = json_object_get_int(wins);
-  pStats->losses = json_object_get_int(losses);
-  pStats->battles = json_object_get_int(battles);
-  pStats->survivedBattles = json_object_get_int(survived_battles);
-  pStats->frags = json_object_get_int(frags);
-  pStats->spots = json_object_get_int(spotted);
+  pData->damage = json_object_get_int(damage_dealt);
+  pData->hits = json_object_get_int(hits);
+  pData->shots = json_object_get_int(shots);
+  pData->win = json_object_get_int(wins);
+  pData->lose = json_object_get_int(losses);
+  pData->survive = json_object_get_int(survived_battles);
+  pData->frags = json_object_get_int(frags);
+  pData->spots = json_object_get_int(spotted);
   return size * nmemb;
 }
 
@@ -208,20 +192,4 @@ size_t achievementParse(void *buffer, size_t size, size_t nmemb, achievements *p
   pAchievements->markOfMasteryII = json_object_get_int(markOfMasteryII);
   pAchievements->markOfMasteryIII = json_object_get_int(markOfMasteryIII);
   return size * nmemb;
-}
-
-void calculateStatsDifference(stats *currentStats, stats *lastStats, stats *battleStats) {
-  battleStats->damageDealt = currentStats->damageDealt - lastStats->damageDealt;
-  battleStats->hits = currentStats->hits - lastStats->hits;
-  battleStats->shots = currentStats->shots - lastStats->shots;
-  battleStats->wins = currentStats->wins - lastStats->wins;
-  battleStats->losses = currentStats->losses - lastStats->losses;
-  battleStats->battles = currentStats->battles - lastStats->battles;
-  battleStats->survivedBattles = currentStats->survivedBattles - lastStats->survivedBattles;
-  battleStats->frags = currentStats->frags - lastStats->frags;
-  battleStats->spots = currentStats->spots - lastStats->spots;
-  battleStats->medals.markOfMastery = currentStats->medals.markOfMastery - lastStats->medals.markOfMastery;
-  battleStats->medals.markOfMasteryI = currentStats->medals.markOfMasteryI - lastStats->medals.markOfMasteryI;
-  battleStats->medals.markOfMasteryII = currentStats->medals.markOfMasteryII - lastStats->medals.markOfMasteryII;
-  battleStats->medals.markOfMasteryIII = currentStats->medals.markOfMasteryIII - lastStats->medals.markOfMasteryIII;
 }

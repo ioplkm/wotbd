@@ -1,12 +1,12 @@
 CC = clang
-CFLAGS = -std=c99 -O3 -Wall -Wextra -Wpedantic
-LDFLAGS = -lcurl -ljson-c
+CFLAGS = -std=c99 -O3 -Wall -Wextra -Wpedantic -s
+LDLIBS = -lcurl -ljson-c
 PREFIX = /usr/local
 all: main.c
-	$(CC) $(CFLAGS) $(LDFLAGS) main.c -o wotb
+	$(CC) $(CFLAGS) $(LDLIBS) main.c -o wotbd
 clean:
-	rm wotb
+	rm wotbd
 install:
-	install -m755 wotb $(PREFIX)/bin
+	install -m755 wotbd $(PREFIX)/bin
 uninstall:
-	rm $(PREFIX)/bin/wotb
+	rm $(PREFIX)/bin/wotbd
