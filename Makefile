@@ -11,5 +11,7 @@ clean:
 	rm wotbd wotb
 install:
 	install -m755 wotbd $(PREFIX)/bin
+	install -m755 wotb $(PREFIX)/bin
 uninstall:
 	rm $(PREFIX)/bin/wotbd
+	rm $(PREFIX)/bin/wotb
