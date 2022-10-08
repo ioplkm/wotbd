@@ -1,10 +1,9 @@
-#include <stdio.h>
-
-#include <fcntl.h>
-#include <unistd.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "struct.h"
+
+const char *tankUrl = "https://api.wotblitz.eu/wotb/encyclopedia/vehicles/?application_id=%s&tank_id=%d";
 
 typedef struct node {
   uint16_t tankId;
@@ -20,16 +19,35 @@ typedef struct node {
   struct node* next;
 } node;
 
-node* head;
-node* cur;
+node *head;
+node *cur;
+
+char tankName[99];
+char *url;
+CURL *tankHandle;
 
 battle c;
 
+size_t nameParse(void *buffer, size_t size, size_t nmemb, char* pName) {
+  json_object *obj = json_tokener_parse(buffer);
+  json_object *data, *id, *jsonName;
+  json_object_object_get_ex(obj, "data", &data);
+  char buf[6];
+  sprintf(buf, "%d", cur->tankId);
+  json_object_object_get_ex(data, buf, &id);
+  json_object_object_get_ex(id, "name", &jsonName);
+  strcpy(tankName, json_object_get_string(jsonName));
+  return size * nmemb;
+}
+
 void print(void) {
-  printf(" tank |  # | damage | hitrate | winrate | survival | frags | spots\n");
-  node* cur = head;
+  printf("   tank   |  # | damage | hitrate | winrate | survival | frags | spots\n");
+  cur = head;
   while (cur) {
-    printf("%5d |%3d |%7.1f | %6.2f%% | %6.2f%% | %7.2f%% | %5.2f | %5.2f\n", cur->tankId, cur->battles, 
+    sprintf(url, tankUrl, appId, cur->tankId);
+    curl_easy_setopt(tankHandle, CURLOPT_URL, url);
+    curl_easy_perform(tankHandle);
+    printf("%9s |%3d |%7.1f | %6.2f%% | %6.2f%% | %7.2f%% | %5.2f | %5.2f\n", tankName, cur->battles, 
           (float)cur->damage / cur->battles, (float)cur->hits / cur->shots * 100,
           (float)cur->wins / cur->battles * 100, (float)cur->survival / cur->battles * 100,
           (float)cur->frags / cur->battles, (float)cur->spots / cur->battles);
@@ -38,13 +56,19 @@ void print(void) {
 }
 
 int main(int argc, char* argv[]) {
+  curl_global_init(CURL_GLOBAL_ALL);
+  url = (char*)malloc(sizeof(char) * 999);
+  tankHandle = curl_easy_init();
+  curl_easy_setopt(tankHandle, CURLOPT_WRITEFUNCTION, nameParse);
+  curl_easy_setopt(tankHandle, CURLOPT_WRITEDATA, tankName);
   int fd = open("/var/wotbd/battles.db", O_RDONLY);
-  lseek(fd, -16, SEEK_END);
+  lseek(fd, 0, SEEK_END);
   time_t prevDay = time(NULL);
   prevDay -= prevDay % 86400;
   for (;;) {
+    if (lseek(fd, -16, SEEK_CUR) == -1) break;
     read(fd, &c, 16);
-    if (lseek(fd, -32, SEEK_CUR) == -1) break;
+    if (lseek(fd, -16, SEEK_CUR) == -1) break;
     if (c.timestamp < prevDay) break;
     cur = head;
     for (;;) {
@@ -58,6 +82,7 @@ int main(int argc, char* argv[]) {
         link->wins = c.win;
         link->survival = c.survive;
         link->frags = c.frags;
+        link->spots = c.spots;
         link->next = head;
         head = link;
         break;
@@ -69,6 +94,7 @@ int main(int argc, char* argv[]) {
         cur->wins += c.win;
         cur->survival += c.survive;
         cur->frags += c.frags;
+        cur->spots += c.spots;
         cur->battles++;
         break;
       }

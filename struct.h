@@ -1,6 +1,16 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <time.h>
+#include <stdio.h>
+
+#include <unistd.h>
+#include <fcntl.h>
+
+#include <curl/curl.h>
+#include <json-c/json.h>
+
+const char* accountId = "595173901";
+const char* appId = "e9312825c85a13c661abccd749a42361";
 
 typedef struct achievements {
   uint32_t markOfMastery;

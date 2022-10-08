@@ -1,16 +1,6 @@
-#include <stdio.h>
-
-#include <unistd.h>
-#include <fcntl.h>
 #include <sys/stat.h>
 
-#include <curl/curl.h>
-#include <json-c/json.h>
-
 #include "struct.h"
-
-const char* accountId = "595173901";
-const char* appId = "e9312825c85a13c661abccd749a42361";
 
 const char* timeUrl = "https://api.wotblitz.eu/wotb/account/info/?application_id=%s&account_id=%s&fields=last_battle_time";
 const char* dataUrl = "https://api.wotblitz.eu/wotb/account/info/?application_id=%s&account_id=%s&fields=statistics.all.battles%%2Cstatistics.all.damage_dealt%%2Cstatistics.all.wins%%2Cstatistics.all.survived_battles%%2Cstatistics.all.hits%%2Cstatistics.all.shots%%2Cstatistics.all.losses%%2Cstatistics.all.frags%%2Cstatistics.all.spotted";
