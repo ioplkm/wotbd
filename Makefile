@@ -6,7 +6,7 @@ all: daemon client
 daemon: daemon.c struct.h
 	$(CC) $(CFLAGS) $(LDLIBS) daemon.c -o wotbd
 client: client.c struct.h
-	$(CC) $(CFLAGS) $(LDLIBS) client.c -o wotb
+	$(CC) $(CFLAGS) client.c -o wotb
 clean:
 	rm wotbd wotb
 install:

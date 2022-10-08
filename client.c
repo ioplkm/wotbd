@@ -25,19 +25,19 @@ node* cur;
 
 battle c;
 
-void print() {
+void print(void) {
   printf(" tank |  # | damage | hitrate | winrate | survival | frags | spots\n");
   node* cur = head;
   while (cur) {
-    printf("%5d |%3d |%7.1f | %6.2f%% | %6.2f%% | %7.2f%% | %5.2f | \n", cur->tankId, cur->battles, 
+    printf("%5d |%3d |%7.1f | %6.2f%% | %6.2f%% | %7.2f%% | %5.2f | %5.2f\n", cur->tankId, cur->battles, 
           (float)cur->damage / cur->battles, (float)cur->hits / cur->shots * 100,
           (float)cur->wins / cur->battles * 100, (float)cur->survival / cur->battles * 100,
-          (float)cur->frags / cur->battles);
+          (float)cur->frags / cur->battles, (float)cur->spots / cur->battles);
     cur = cur->next;
   }
 }
 
-int main() {
+int main(int argc, char* argv[]) {
   int fd = open("/var/wotbd/battles.db", O_RDONLY);
   lseek(fd, -16, SEEK_END);
   time_t prevDay = time(NULL);

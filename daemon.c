@@ -2,6 +2,7 @@
 
 #include <unistd.h>
 #include <fcntl.h>
+#include <sys/stat.h>
 
 #include <curl/curl.h>
 #include <json-c/json.h>
@@ -27,7 +28,7 @@ size_t dataParse(void* buffer, size_t size, size_t nmemb, data *pData);
 size_t tanksParse(void* buffer, size_t size, size_t nmemb, uint16_t *tankId);
 size_t achievementParse(void* buffer, size_t size, size_t nmemb, achievements *pAchievements);
 
-int main() {
+int main(int argc, char* argv[]) {
   //printf("%lu\n", sizeof(battle));
   curl_global_init(CURL_GLOBAL_ALL);
   char *url = (char*)malloc(sizeof(char) * 999); 
@@ -63,6 +64,7 @@ int main() {
   curl_easy_setopt(achievementHandle, CURLOPT_WRITEDATA, &currentStats.medals);*/
 
   free(url);
+  mkdir("/var/wotbd", 0440);
   int fd = open("/var/wotbd/battles.db", O_APPEND | O_CREAT | O_WRONLY, 0440);
   for (;;) {
     curl_easy_perform(timeHandle);
