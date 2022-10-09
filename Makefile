@@ -5,7 +5,7 @@ PREFIX = /usr/local
 all: daemon client
 daemon: daemon.c struct.h
 	$(CC) $(CFLAGS) $(LDLIBS) daemon.c -o wotbd
-client: client.c struct.h
+client: client.c struct.h config.h crutch.h
 	$(CC) $(CFLAGS) $(LDLIBS) client.c -o wotb
 clean:
 	rm wotbd wotb

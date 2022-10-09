@@ -1,7 +1,9 @@
 #include <stdlib.h>
 #include <string.h>
+#include <wchar.h>
 
 #include "struct.h"
+#include "crutch.h"
 
 #include "config.h"
 
@@ -50,24 +52,26 @@ size_t nameParse(void *buffer, size_t size, size_t nmemb, char* pName) {
   sprintf(buf, "%d", cur->tankId);
   json_object_object_get_ex(data, buf, &id);
   json_object_object_get_ex(id, "name", &jsonName);
-  strcpy(tankName, json_object_get_string(jsonName));
+  strcpy(pName, json_object_get_string(jsonName));
   return size * nmemb;
 }
 
 void print(void) {
-  printf("                tank  |  # | damage | hitrate | winrate | survival | frags | spots\n");
+  printf("                        tank  |  # | damage | hitrate | winrate | survival | frags | spots\n");
   cur = head;
   while (cur) {
     sprintf(url, tankUrl, appId, cur->tankId);
     curl_easy_setopt(tankHandle, CURLOPT_URL, url);
     curl_easy_perform(tankHandle);
-    printf("%21.21s |%3d |%7.1f | %6.2f%% | %6.2f%% | %7.2f%% | %5.2f | %5.2f\n",
+    for (int i = 0; i < offset(tankName); i++) printf(" "); //do smth with this crutch
+    printf("%29s |%3d |%7.1f | %6.2f%% | %6.2f%% | %7.2f%% | %5.2f | %5.2f\n",
            tankName, cur->battles, (float)cur->damage / cur->battles, 
            (float)cur->hits / cur->shots * 100, 
            (float)cur->wins / cur->battles * 100, 
            (float)cur->survival / cur->battles * 100,
            (float)cur->frags / cur->battles, 
            (float)cur->spots / cur->battles);
+    //printf("%d", cur->tankId);
     cur = cur->next;
   }
 }
@@ -82,6 +86,7 @@ int main(int argc, char* argv[]) {
   lseek(fd, 0, SEEK_END);
   time_t prevDay = time(NULL);
   prevDay -= (prevDay + (timezone - start)*3600) % 86400;
+  if (argc == 2 && !strcmp(argv[1], "m")) prevDay -= 29 * 86400; //month stat
   for (;;) {
     if (lseek(fd, -16, SEEK_CUR) == -1) break;
     read(fd, &c, 16);
