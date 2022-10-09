@@ -54,7 +54,7 @@ int main(int argc, char* argv[]) {
   curl_easy_setopt(achievementHandle, CURLOPT_WRITEDATA, &currentStats.medals);*/
 
   free(url);
-  mkdir("/var/wotbd", 0440);
+  mkdir("/var/wotbd", 0444);
   int fd = open("/var/wotbd/battles.db", O_APPEND | O_CREAT | O_WRONLY, 0440);
   for (;;) {
     curl_easy_perform(timeHandle);

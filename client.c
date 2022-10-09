@@ -3,6 +3,8 @@
 
 #include "struct.h"
 
+#include "config.h"
+
 const char *tankUrl = "https://api.wotblitz.eu/wotb/encyclopedia/vehicles/?application_id=%s&tank_id=%d";
 
 typedef struct node {
@@ -18,6 +20,18 @@ typedef struct node {
   uint32_t survival;
   struct node* next;
 } node;
+
+typedef struct sum {
+  uint32_t level;
+  uint32_t battles;
+  uint32_t damage;
+  uint32_t shots;
+  uint32_t hits;
+  uint32_t frags;
+  uint32_t spots;
+  uint32_t wins;
+  uint32_t survival;
+} sum; //todo
 
 node *head;
 node *cur;
@@ -41,16 +55,19 @@ size_t nameParse(void *buffer, size_t size, size_t nmemb, char* pName) {
 }
 
 void print(void) {
-  printf("   tank   |  # | damage | hitrate | winrate | survival | frags | spots\n");
+  printf("                tank  |  # | damage | hitrate | winrate | survival | frags | spots\n");
   cur = head;
   while (cur) {
     sprintf(url, tankUrl, appId, cur->tankId);
     curl_easy_setopt(tankHandle, CURLOPT_URL, url);
     curl_easy_perform(tankHandle);
-    printf("%9s |%3d |%7.1f | %6.2f%% | %6.2f%% | %7.2f%% | %5.2f | %5.2f\n", tankName, cur->battles, 
-          (float)cur->damage / cur->battles, (float)cur->hits / cur->shots * 100,
-          (float)cur->wins / cur->battles * 100, (float)cur->survival / cur->battles * 100,
-          (float)cur->frags / cur->battles, (float)cur->spots / cur->battles);
+    printf("%21.21s |%3d |%7.1f | %6.2f%% | %6.2f%% | %7.2f%% | %5.2f | %5.2f\n",
+           tankName, cur->battles, (float)cur->damage / cur->battles, 
+           (float)cur->hits / cur->shots * 100, 
+           (float)cur->wins / cur->battles * 100, 
+           (float)cur->survival / cur->battles * 100,
+           (float)cur->frags / cur->battles, 
+           (float)cur->spots / cur->battles);
     cur = cur->next;
   }
 }
@@ -64,7 +81,7 @@ int main(int argc, char* argv[]) {
   int fd = open("/var/wotbd/battles.db", O_RDONLY);
   lseek(fd, 0, SEEK_END);
   time_t prevDay = time(NULL);
-  prevDay -= prevDay % 86400;
+  prevDay -= (prevDay + (timezone - start)*3600) % 86400;
   for (;;) {
     if (lseek(fd, -16, SEEK_CUR) == -1) break;
     read(fd, &c, 16);
