@@ -1,5 +1,7 @@
 #include <sys/stat.h>
+#include <sys/types.h>
 
+#include "config.h"
 #include "struct.h"
 
 const char* timeUrl = "https://api.wotblitz.eu/wotb/account/info/?application_id=%s&account_id=%s&fields=last_battle_time";
@@ -19,6 +21,14 @@ size_t tanksParse(void* buffer, size_t size, size_t nmemb, uint16_t *tankId);
 size_t achievementParse(void* buffer, size_t size, size_t nmemb, achievements *pAchievements);
 
 int main(int argc, char* argv[]) {
+  pid_t pid = fork();
+  if (pid < 0) return 1;
+  if (pid > 0) return 0;
+  umask(0);
+  if (setsid() < 0) return 1;
+  close(STDIN_FILENO);
+  close(STDOUT_FILENO);
+  close(STDERR_FILENO);
   //printf("%lu\n", sizeof(battle));
   curl_global_init(CURL_GLOBAL_ALL);
   char *url = (char*)malloc(sizeof(char) * 999); 
@@ -54,8 +64,7 @@ int main(int argc, char* argv[]) {
   curl_easy_setopt(achievementHandle, CURLOPT_WRITEDATA, &currentStats.medals);*/
 
   free(url);
-  mkdir("/var/wotbd", 0444);
-  int fd = open("/var/wotbd/battles.db", O_APPEND | O_CREAT | O_WRONLY, 0440);
+  int fd = open(path, O_APPEND | O_CREAT | O_WRONLY, 0440);
   for (;;) {
     curl_easy_perform(timeHandle);
     if (newTime != lastBattleTime) {

@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
-#include <wchar.h>
+
+#include <unistd.h>
 
 #include "struct.h"
 #include "crutch.h"
@@ -56,27 +57,40 @@ size_t nameParse(void *buffer, size_t size, size_t nmemb, char* pName) {
   return size * nmemb;
 }
 
+char* getName(uint16_t tankId) {
+  sprintf(url, tankUrl, appId, tankId);
+  curl_easy_setopt(tankHandle, CURLOPT_URL, url);
+  curl_easy_perform(tankHandle);
+  return tankName;
+}
+
 void print(void) {
   printf("                        tank  |  # | damage | hitrate | winrate | survival | frags | spots\n");
   cur = head;
   while (cur) {
-    sprintf(url, tankUrl, appId, cur->tankId);
-    curl_easy_setopt(tankHandle, CURLOPT_URL, url);
-    curl_easy_perform(tankHandle);
-    for (int i = 0; i < offset(tankName); i++) printf(" "); //do smth with this crutch
+    for (int i = 0; i < offset(getName(cur->tankId)); i++) printf(" "); //do smth with this crutch
     printf("%29s |%3d |%7.1f | %6.2f%% | %6.2f%% | %7.2f%% | %5.2f | %5.2f\n",
-           tankName, cur->battles, (float)cur->damage / cur->battles, 
+           getName(cur->tankId), 
+           cur->battles, 
+           (float)cur->damage / cur->battles, 
            (float)cur->hits / cur->shots * 100, 
            (float)cur->wins / cur->battles * 100, 
            (float)cur->survival / cur->battles * 100,
            (float)cur->frags / cur->battles, 
            (float)cur->spots / cur->battles);
-    //printf("%d", cur->tankId);
     cur = cur->next;
   }
 }
 
 int main(int argc, char* argv[]) {
+  char opt;
+  int days = 0;
+  while ((opt = getopt(argc, argv, "d:")) != -1) {
+    switch (opt) {
+      case 'd':
+        days = atoi(optarg) - 1;
+    }
+  }
   curl_global_init(CURL_GLOBAL_ALL);
   url = (char*)malloc(sizeof(char) * 999);
   tankHandle = curl_easy_init();
@@ -86,7 +100,8 @@ int main(int argc, char* argv[]) {
   lseek(fd, 0, SEEK_END);
   time_t prevDay = time(NULL);
   prevDay -= (prevDay + (timezone - start)*3600) % 86400;
-  if (argc == 2 && !strcmp(argv[1], "m")) prevDay -= 29 * 86400; //month stat
+  //if (argc == 2 && !strcmp(argv[1], "m")) prevDay -= 29 * 86400; //month stat
+  prevDay -= days * 86400;
   for (;;) {
     if (lseek(fd, -16, SEEK_CUR) == -1) break;
     read(fd, &c, 16);
