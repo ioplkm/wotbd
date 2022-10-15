@@ -2,14 +2,14 @@
 #include <sys/types.h>
 
 #include "config.h"
-#include "struct.h"
+#include "update.h"
 
 const char* timeUrl = "https://api.wotblitz.eu/wotb/account/info/?application_id=%s&account_id=%s&fields=last_battle_time";
 const char* dataUrl = "https://api.wotblitz.eu/wotb/account/info/?application_id=%s&account_id=%s&fields=statistics.all.battles%%2Cstatistics.all.damage_dealt%%2Cstatistics.all.wins%%2Cstatistics.all.survived_battles%%2Cstatistics.all.hits%%2Cstatistics.all.shots%%2Cstatistics.all.losses%%2Cstatistics.all.frags%%2Cstatistics.all.spotted";
 const char* tanksUrl = "https://api.wotblitz.eu/wotb/tanks/stats/?application_id=%s&account_id=%s&fields=last_battle_time%%2Ctank_id";
 const char* achievementUrl = "https://api.wotblitz.eu/wotb/account/achievements/?application_id=%s&account_id=%s&fields=achievements";
 
-time_t lastBattleTime, newTime;
+time_t lastBattleTime;//, newTime;
 
 data lastData;
 data currentData;
@@ -38,8 +38,6 @@ int main(int argc, char* argv[]) {
   curl_easy_setopt(timeHandle, CURLOPT_URL, url);
   curl_easy_setopt(timeHandle, CURLOPT_WRITEFUNCTION, timeParse);
   curl_easy_setopt(timeHandle, CURLOPT_WRITEDATA, &lastBattleTime);
-  curl_easy_perform(timeHandle);
-  curl_easy_setopt(timeHandle, CURLOPT_WRITEDATA, &newTime);
 
   CURL *dataHandle = curl_easy_init();
   sprintf(url, dataUrl, appId, accountId);
@@ -64,14 +62,14 @@ int main(int argc, char* argv[]) {
   curl_easy_setopt(achievementHandle, CURLOPT_WRITEDATA, &currentStats.medals);*/
 
   free(url);
+  checkInit();
   int fd = open(path, O_APPEND | O_CREAT | O_WRONLY, 0440);
   for (;;) {
-    curl_easy_perform(timeHandle);
-    if (newTime != lastBattleTime) {
-      lastBattleTime = newTime;
-      record.timestamp = lastBattleTime;
+    if (checkUpdate()) {
+      curl_easy_perform(timeHandle);
       curl_easy_perform(tanksHandle);
       curl_easy_perform(dataHandle);
+      record.timestamp = lastBattleTime;
       record.damage = currentData.damage - lastData.damage;
       record.shots = currentData.shots - lastData.shots;
       record.hits = currentData.hits - lastData.hits;
