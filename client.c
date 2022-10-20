@@ -42,8 +42,17 @@ node *cur;
 char tankName[99];
 char *url;
 CURL *tankHandle;
-
+char tier;
 battle c;
+bool color = true;
+
+uint8_t setColor(float damage, char tier) {
+  int ok = (tier - 2) * 500;
+  return 16 + 
+  36 * (damage <= ok - 500 ? 5 : damage >= ok ? 0 : (int)(ok - damage) / 125 + 1) +
+  6 * (damage <= ok - 1000 ? 0 : damage + 500 >= ok ? 5 : (int)(damage - ok + 1000) / 125 + 1) +
+  1 * 0;
+}
 
 size_t nameParse(void *buffer, size_t size, size_t nmemb, char* pName) {
   json_object *obj = json_tokener_parse(buffer);
@@ -54,6 +63,10 @@ size_t nameParse(void *buffer, size_t size, size_t nmemb, char* pName) {
   json_object_object_get_ex(data, buf, &id);
   json_object_object_get_ex(id, "name", &jsonName);
   strcpy(pName, json_object_get_string(jsonName));
+
+  json_object *t;
+  json_object_object_get_ex(id, "tier", &t);
+  tier = json_object_get_int(t);
   return size * nmemb;
 }
 
@@ -69,10 +82,11 @@ void print(void) {
   cur = head;
   while (cur) {
     for (int i = 0; i < offset(getName(cur->tankId)); i++) printf(" "); //do smth with this crutch
-    printf("%29s |%3d |%7.1f | %6.2f%% | %6.2f%% | %7.2f%% | %5.2f | %5.2f\n",
+    printf("%29s |%3d |\x1b[38:5:%dm%7.1f \x1b[0m| %6.2f%% | %6.2f%% | %7.2f%% | %5.2f | %5.2f\n",
            getName(cur->tankId), 
            cur->battles, 
-           (float)cur->damage / cur->battles, 
+           setColor((float)cur->damage / cur->battles, tier),
+           (float)cur->damage / cur->battles,
            (float)cur->hits / cur->shots * 100, 
            (float)cur->wins / cur->battles * 100, 
            (float)cur->survival / cur->battles * 100,
@@ -85,10 +99,12 @@ void print(void) {
 int main(int argc, char* argv[]) {
   char opt;
   int days = 0;
-  while ((opt = getopt(argc, argv, "d:")) != -1) {
+  while ((opt = getopt(argc, argv, "d:C")) != -1) {
     switch (opt) {
       case 'd':
         days = atoi(optarg) - 1;
+      case 'C':
+        color = false;
     }
   }
   curl_global_init(CURL_GLOBAL_ALL);
