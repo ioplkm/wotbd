@@ -48,9 +48,11 @@ bool color = true;
 
 uint8_t setColor(float damage, char tier) {
   int ok = (tier - 2) * 500;
+  if (damage < ok - 1000) return 8;
+  if (damage > ok) return 46;
   return 16 + 
-  36 * (damage <= ok - 500 ? 5 : damage >= ok ? 0 : (int)(ok - damage) / 125 + 1) +
-  6 * (damage <= ok - 1000 ? 0 : damage + 500 >= ok ? 5 : (int)(damage - ok + 1000) / 125 + 1) +
+  36 * (damage <= ok - 500 ? 5 : (int)(ok - damage) / 100 + 1) +
+  6 * (damage >= ok - 500 ? 5 : (int)(damage - ok) / 100 + 9) +
   1 * 0;
 }
 
