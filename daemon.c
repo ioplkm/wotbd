@@ -27,7 +27,7 @@ int main(int argc, char* argv[]) {
   umask(0);
   if (setsid() < 0) return 1;
   close(STDIN_FILENO);
-  close(STDOUT_FILENO);
+  //close(STDOUT_FILENO);
   close(STDERR_FILENO);
   //printf("%lu\n", sizeof(battle));
   curl_global_init(CURL_GLOBAL_ALL);
@@ -67,8 +67,9 @@ int main(int argc, char* argv[]) {
   for (;;) {
     if (checkUpdate()) {
       curl_easy_perform(timeHandle);
-      curl_easy_perform(tanksHandle);
       curl_easy_perform(dataHandle);
+      curl_easy_perform(tanksHandle);
+      printf("damage diff: %d %d\n", currentData.damage, lastData.damage);
       record.timestamp = lastBattleTime;
       record.damage = currentData.damage - lastData.damage;
       record.shots = currentData.shots - lastData.shots;

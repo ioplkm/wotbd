@@ -33,6 +33,7 @@ void checkInit(void) {
 bool checkUpdate(void) {
   curl_easy_perform(battleHandle);
   if (battles == lastBattles) return 0;
+  printf("new battle\n");
   lastBattles = battles;
   return 1;
 }
